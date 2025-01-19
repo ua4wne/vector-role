@@ -1,0 +1,32 @@
+---
+
+- name: Verify
+  hosts: all
+  gather_facts: true
+  vars:
+    vector_service: 'vector'
+    vector_config_path: '/etc/vector/vector.yml'
+  tasks:
+    - name: Populate service facts
+      ansible.builtin.service_facts:
+    - name: Print service facts
+      ansible.builtin.debug:
+        var: ansible_facts.services['vector.service']
+    - name: 'Assert Vector Service'
+      ansible.builtin.assert:
+        that:
+          - "'vector.service' in ansible_facts.services"
+          - "'running' == ansible_facts.services['vector.service'].state"
+          - "'enabled' == ansible_facts.services['vector.service'].status"
+        success_msg: "vector.service running and enabled"
+        fail_msg: "vector.service is failed"
+    - name: "Vector config exists"
+      ansible.builtin.stat:
+        path: "{{ vector_config_path }}"
+      register: file_txt_stat
+    - name: "Check if config exists"
+      ansible.builtin.assert:
+        that:
+          - file_txt_stat.stat.exists == True
+        success_msg: "{{ vector_config_path }} exists"
+        fail_msg: "{{ vector_config_path }} doesn't exist"

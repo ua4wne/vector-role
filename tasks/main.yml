@@ -1,13 +1,28 @@
 ---
-- name: Download Vector packages
+- name: Download Vector deb packages
   ansible.builtin.get_url:
     url: "https://packages.timber.io/vector/{{ vector_version }}/vector_{{ vector_version }}-1_amd64.deb"
     dest: "./vector_{{ vector_version }}_amd64.deb"
-    mode: "0755"
+    mode: "0644"
+  when: ansible_facts['pkg_mgr'] == 'apt'
+- name: Get vector rpm packages
+  ansible.builtin.get_url:
+    url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-1.x86_64.rpm"
+    dest: "./vector-{{ vector_version }}-1.x86_64.rpm"
+    mode: '0644'
+  when: ansible_facts['pkg_mgr'] == 'dnf'
+- name: Install vector packages (dnf)
+  ansible.builtin.dnf:
+    name:
+      - "vector-{{ vector_version }}-1.x86_64.rpm"
+    disable_gpg_check: true
+  notify: Reload vector
+  when: ansible_facts['pkg_mgr'] == 'dnf'
 - name: Install Vector packages
   become: true
   ansible.builtin.apt:
     deb: vector_{{ vector_version }}_amd64.deb
+  when: ansible_facts['pkg_mgr'] == 'apt'
 - name: Vector | Apply template
   ansible.builtin.template:
     src: vector.yml.j2
@@ -15,12 +30,8 @@
     mode: "0644"
     owner: "{{ ansible_user_id }}"
     group: "{{ ansible_user_gid }}"
-- name: Vector | change systemd unit
-  ansible.builtin.template:
-    src: vector.service.j2
-    dest: /etc/systemd/system/vector.service
-    mode: "0644"
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_gid }}"
-    backup: true
-  notify: Start Vector service
+  notify: Restart vector
+- name: Enable vector.service
+  ansible.builtin.service:
+    name: vector
+    enabled: true
