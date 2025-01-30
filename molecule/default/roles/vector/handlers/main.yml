@@ -1,0 +1,12 @@
+---
+- name: Restart vector
+  become: true
+  ansible.builtin.systemd:
+    name: vector
+    state: restarted
+  when: ansible_facts['pkg_mgr'] == 'apt'
+- name: Reload vector
+  ansible.builtin.systemd:
+    name: vector
+    state: restarted
+  when: ansible_facts['pkg_mgr'] == 'dnf'
